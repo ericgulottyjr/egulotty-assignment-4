@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LSA Search Engine</title>
+    <style>
+        /* Basic styling */
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        input[type="text"] { width: 80%; padding: 10px; }
+        button { padding: 10px 20px; }
+        .results { margin-top: 20px; }
+        .document { margin-bottom: 20px; }
+        .score { color: green; }
+        #similarityChart {
+            max-width: 800px;
+            margin: 20px auto;
+            display: block;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LSA Search Engine</h1>
+        <input type="text" id="query" placeholder="Enter your query here">
+        <button onclick="performSearch()">Search</button>
+        <div class="results" id="results"></div>
+        <canvas id="similarityChart"></canvas>
+    </div>
+    <!-- Load Chart.js version 2.9.4 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+    <script>
+        let similarityChartInstance; // Declare the chart instance variable
+    
+        function performSearch() {
+            const query = document.getElementById('query').value;
+            fetch('/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'query=' + encodeURIComponent(query)
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayResults(data);
+                drawChart(data);
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            data.forEach((item, index) => {
+                const docDiv = document.createElement('div');
+                docDiv.classList.add('document');
+                docDiv.innerHTML = `<h3>Document ${index + 1}</h3>
+                                    <p>${item.document}</p>
+                                    <p class="score">Similarity Score: ${item.score}</p>`;
+                resultsDiv.appendChild(docDiv);
+            });
+        }
+    
+        function drawChart(data) {
+            const ctx = document.getElementById('similarityChart').getContext('2d');
+            const labels = data.map((_, i) => 'Doc ' + (i + 1));
+            const scores = data.map(item => parseFloat(item.score));
+    
+            // Destroy previous chart instance if it exists
+            if (similarityChartInstance) {
+                similarityChartInstance.destroy();
+            }
+    
+            // Create new chart instance
+            similarityChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cosine Similarity',
+                        data: scores,
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                    }]
+                },
+                options: {
+                    scales: {
+                        yAxes: [{
+                            ticks: { beginAtZero: true }
+                        }]
+                    }
+                }
+            });
+        }
+    </script>    
+</body>
+</html>
